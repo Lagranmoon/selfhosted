@@ -1,6 +1,13 @@
 #!/bin/bash
 set -e
 
+# 检测 shell 类型，必须使用 bash 运行
+if [ -z "$BASH_VERSION" ]; then
+    echo "错误: 此脚本需要使用 bash 运行"
+    echo "请使用: bash $0"
+    exit 1
+fi
+
 # Vaultwarden 备份脚本
 # 备份策略: 最近7天全部 + 最近3个月每月第一个 + 最近3年每年第一个
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

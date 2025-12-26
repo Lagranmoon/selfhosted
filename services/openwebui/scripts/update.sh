@@ -1,6 +1,13 @@
 #!/bin/bash
 set -e
 
+# 检测 shell 类型，必须使用 bash 运行
+if [ -z "$BASH_VERSION" ]; then
+    echo "错误: 此脚本需要使用 bash 运行"
+    echo "请使用: bash $0"
+    exit 1
+fi
+
 # Open WebUI 更新脚本
 # 注意：Open WebUI 目前处于 v0.x 阶段，更新可能包含破坏性变更
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
