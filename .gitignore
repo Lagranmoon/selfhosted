@@ -1,30 +1,50 @@
-# Environment files
+# ================================
+# Kiro IDE
+# ================================
+.kiro/
+
+# ================================
+# Environment files (敏感配置)
+# ================================
 .env
 *.env.local
 
-# Certificates
-docker-compose/traefik/certs/
+# ================================
+# Runtime data (运行时数据，不纳入版本管理)
+# ================================
+# 通用数据目录
+**/data/
+**/backups/
+
+# Traefik
+services/traefik/certs/
+services/traefik/logs/
+services/traefik/crowdsec/data/
+
+# ================================
+# Certificates (证书文件)
+# ================================
 *.pem
 *.key
 *.crt
+acme.json
 
-# Logs
-docker-compose/traefik/logs/
+# ================================
+# Logs (日志文件)
+# ================================
 *.log
 
-# CrowdSec data
-docker-compose/traefik/crowdsec/data/
-
-# Open WebUI data
-docker-compose/openwebui/data/
-
-# Editor
+# ================================
+# Editor (编辑器配置)
+# ================================
 .idea/
 .vscode/
 *.swp
 *.swo
 *~
 
-# OS
+# ================================
+# OS (系统文件)
+# ================================
 .DS_Store
 Thumbs.db

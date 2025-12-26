@@ -121,6 +121,30 @@ docker exec openwebui-postgres pg_dump -U openwebui openwebui > backup.sql
 cat backup.sql | docker exec -i openwebui-postgres psql -U openwebui openwebui
 ```
 
+## 更新服务
+
+Open WebUI 目前处于 v0.x 阶段，更新可能包含破坏性变更。使用更新脚本可以自动备份和回滚：
+
+```bash
+chmod +x scripts/update.sh
+./scripts/update.sh
+```
+
+更新脚本会：
+1. 显示当前版本和最新版本
+2. 自动备份 PostgreSQL 数据库
+3. 拉取最新镜像并重启服务
+4. 健康检查，确认服务正常启动
+5. **如果更新失败，自动回滚镜像和数据库**
+6. 清理旧镜像
+
+手动恢复数据库（如需要）：
+```bash
+cat scripts/backup_xxx.sql | docker compose exec -T postgres psql -U openwebui openwebui
+```
+
+---
+
 ## 常用命令
 
 ```bash

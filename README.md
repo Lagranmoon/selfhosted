@@ -6,20 +6,28 @@
 
 | 服务 | 说明 | 文档 |
 |------|------|------|
-| Traefik + CrowdSec | 反向代理 + WAF + IPS | [详细文档](docker-compose/traefik/README.md) |
-| Open WebUI | AI 聊天界面 | [详细文档](docker-compose/openwebui/README.md) |
+| Traefik + CrowdSec | 反向代理 + WAF + IPS | [详细文档](services/traefik/README.md) |
+| Open WebUI | AI 聊天界面 | [详细文档](services/openwebui/README.md) |
+| Vaultwarden | 密码管理器 (Bitwarden 兼容) | [详细文档](services/vaultwarden/README.md) |
 
 ## 目录结构
 
 ```
 .
-├── docker-compose/
-│   ├── traefik/              # Traefik v3 + CrowdSec
-│   └── openwebui/            # Open WebUI + PostgreSQL
+├── services/                   # 服务配置 (Git 管理)
+│   ├── traefik/               # Traefik v3 + CrowdSec
+│   ├── openwebui/             # Open WebUI + PostgreSQL
+│   └── vaultwarden/           # Vaultwarden 密码管理器
 └── scripts/
     ├── init/
     └── backup/
 ```
+
+## 设计原则
+
+- **配置即代码**：所有配置文件通过 Git 版本管理
+- **数据分离**：运行时数据（`data/`、`backups/`、`logs/`）不纳入 Git
+- **敏感信息隔离**：`.env` 文件存储敏感配置，不提交到仓库
 
 ## 快速开始
 
@@ -31,7 +39,7 @@
 ### 部署 Traefik
 
 ```bash
-cd docker-compose/traefik
+cd services/traefik
 
 # 初始化
 chmod +x scripts/init.sh
@@ -45,7 +53,7 @@ nano .env
 docker compose up -d
 ```
 
-详细配置说明请参考 [Traefik 文档](docker-compose/traefik/README.md)。
+详细配置说明请参考 [Traefik 文档](services/traefik/README.md)。
 
 ## 功能特性
 
@@ -74,6 +82,7 @@ docker compose up -d
 ## 注意事项
 
 - 敏感配置使用 `.env` 文件管理，已添加到 `.gitignore`
+- 运行时数据目录（`data/`、`backups/`）不纳入版本管理
 - 定期更新镜像版本和 CrowdSec 规则
 - 备份 `acme.json` 证书文件
 
