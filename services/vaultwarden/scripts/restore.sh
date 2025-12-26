@@ -1,21 +1,21 @@
 #!/bin/bash
 set -e
 
-# Require bash
+# 检测 shell 类型，必须使用 bash 运行
 if [ -z "$BASH_VERSION" ]; then
-    echo "Error: This script requires bash"
-    echo "Usage: bash $0"
+    echo "错误: 此脚本需要使用 bash 运行"
+    echo "请使用: bash $0"
     exit 1
 fi
 
-# Vaultwarden Restore Script
+# Vaultwarden 恢复脚本
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 COMPOSE_DIR="$(dirname "$SCRIPT_DIR")"
 BACKUP_DIR="$COMPOSE_DIR/backups"
 DATA_DIR="$COMPOSE_DIR/data"
 
-# Color definitions
+# 颜色定义
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -26,24 +26,25 @@ log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
 echo "=========================================="
-echo "  Vaultwarden Restore Script"
+echo "  Vaultwarden 恢复脚本"
 echo "=========================================="
 echo ""
 
-# List available backups
-echo "Available local backups:"
+# 列出可用备份
+echo "可用的本地备份:"
 echo ""
 ls -lh "$BACKUP_DIR"/*.tar.gz 2>/dev/null | awk '{print NR". "$NF" ("$5")"}' || {
-    log_error "No local backup files found"
+    log_error "没有找到本地备份文件"
     echo ""
-    echo "You can download backups from S3 or remote server to $BACKUP_DIR/"
+    echo "你可以从 S3 或远程服务器下载备份到 $BACKUP_DIR/"
     exit 1
 }
 
 echo ""
-read -p "Enter backup filename (or full path): " BACKUP_FILE
+read -p "请输入要恢复的备份文件名 (或输入完整路径): " BACKUP_FILE
 
-# Process input
+
+# 处理输入
 if [[ ! "$BACKUP_FILE" == /* ]] && [[ ! "$BACKUP_FILE" == ./* ]]; then
     if [[ ! "$BACKUP_FILE" == *.tar.gz ]]; then
         BACKUP_FILE="${BACKUP_FILE}.tar.gz"
@@ -52,108 +53,109 @@ if [[ ! "$BACKUP_FILE" == /* ]] && [[ ! "$BACKUP_FILE" == ./* ]]; then
 fi
 
 if [ ! -f "$BACKUP_FILE" ]; then
-    log_error "Backup file not found: $BACKUP_FILE"
+    log_error "备份文件不存在: $BACKUP_FILE"
     exit 1
 fi
 
 echo ""
-log_warn "Warning: Restore will overwrite all current data"
-log_warn "Current data will be backed up to ${DATA_DIR}.bak"
+log_warn "警告: 恢复操作将覆盖当前所有数据"
+log_warn "当前数据将备份到 ${DATA_DIR}.bak"
 echo ""
-read -p "Confirm restore? (type YES to continue): " confirm
+read -p "确认恢复? (输入 YES 继续): " confirm
 
 if [ "$confirm" != "YES" ]; then
-    echo "Restore cancelled"
+    echo "已取消恢复"
     exit 0
 fi
 
-# Stop service
-log_info "Stopping Vaultwarden service..."
+# 停止服务
+log_info "停止 Vaultwarden 服务..."
 cd "$COMPOSE_DIR"
 docker compose down 2>/dev/null || true
 
-# Backup current data
+# 备份当前数据
 if [ -d "$DATA_DIR" ]; then
-    log_info "Backing up current data to ${DATA_DIR}.bak..."
+    log_info "备份当前数据到 ${DATA_DIR}.bak..."
     rm -rf "${DATA_DIR}.bak"
     mv "$DATA_DIR" "${DATA_DIR}.bak"
 fi
 
-# Create new data directory
+# 创建新数据目录
 mkdir -p "$DATA_DIR"
 
-# Extract backup
-log_info "Extracting backup file..."
+# 解压备份
+log_info "解压备份文件..."
 TEMP_DIR=$(mktemp -d)
 tar -xzf "$BACKUP_FILE" -C "$TEMP_DIR"
 
-# Find extracted directory
+# 找到解压后的目录
 EXTRACTED_DIR=$(find "$TEMP_DIR" -maxdepth 1 -type d -name "vaultwarden_*" | head -1)
 if [ -z "$EXTRACTED_DIR" ]; then
     EXTRACTED_DIR="$TEMP_DIR"
 fi
 
-# Restore database
+
+# 恢复数据库
 if [ -f "$EXTRACTED_DIR/db.sqlite3" ]; then
-    log_info "Restoring database..."
+    log_info "恢复数据库..."
     cp "$EXTRACTED_DIR/db.sqlite3" "$DATA_DIR/"
     rm -f "$DATA_DIR/db.sqlite3-wal" "$DATA_DIR/db.sqlite3-shm"
 else
-    log_error "Database file not found in backup!"
+    log_error "备份中没有找到数据库文件!"
     exit 1
 fi
 
-# Restore attachments
+# 恢复附件
 if [ -d "$EXTRACTED_DIR/attachments" ]; then
-    log_info "Restoring attachments..."
+    log_info "恢复附件..."
     cp -r "$EXTRACTED_DIR/attachments" "$DATA_DIR/"
 fi
 
-# Restore Send attachments
+# 恢复 Send 附件
 if [ -d "$EXTRACTED_DIR/sends" ]; then
-    log_info "Restoring Send attachments..."
+    log_info "恢复 Send 附件..."
     cp -r "$EXTRACTED_DIR/sends" "$DATA_DIR/"
 fi
 
-# Restore RSA keys
+# 恢复 RSA 密钥
 if ls "$EXTRACTED_DIR"/rsa_key* 1> /dev/null 2>&1; then
-    log_info "Restoring RSA keys..."
+    log_info "恢复 RSA 密钥..."
     cp "$EXTRACTED_DIR"/rsa_key* "$DATA_DIR/"
 fi
 
-# Restore config
+# 恢复配置
 if [ -f "$EXTRACTED_DIR/config.json" ]; then
-    log_info "Restoring config..."
+    log_info "恢复配置..."
     cp "$EXTRACTED_DIR/config.json" "$DATA_DIR/"
 fi
 
-# Clean temp directory
+# 清理临时目录
 rm -rf "$TEMP_DIR"
 
-# Set permissions
-log_info "Setting directory permissions..."
+# 设置权限
+log_info "设置目录权限..."
 chown -R 1000:1000 "$DATA_DIR" 2>/dev/null || true
 
-# Start service
-log_info "Starting Vaultwarden service..."
+# 启动服务
+log_info "启动 Vaultwarden 服务..."
 docker compose up -d
 
-# Wait for service to start
+# 等待服务启动
 sleep 5
 
-# Check service status
+# 检查服务状态
 if docker compose ps | grep -q "running"; then
     echo ""
     echo "=========================================="
-    log_info "Restore complete!"
+    log_info "恢复完成!"
     echo "=========================================="
     echo ""
-    echo "Old data backed up to: ${DATA_DIR}.bak"
-    echo "To rollback, restore manually"
+    echo "旧数据已备份到: ${DATA_DIR}.bak"
+    echo "如需回滚，可以手动恢复"
 else
-    log_error "Service failed to start, check logs: docker compose logs"
+    log_error "服务启动失败，请检查日志: docker compose logs"
     echo ""
-    echo "To rollback:"
+    echo "如需回滚:"
     echo "  docker compose down"
     echo "  rm -rf $DATA_DIR"
     echo "  mv ${DATA_DIR}.bak $DATA_DIR"

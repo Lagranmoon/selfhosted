@@ -54,9 +54,7 @@ services/<service>/
 ### 5. 文件编码规范
 - **所有文件必须使用 UTF-8 编码，无 BOM**
 - Shell 脚本必须使用 LF 换行符（已通过 `.gitattributes` 强制）
-- **Shell 脚本使用英文**：避免中文编码在不同系统间的兼容性问题
-- 配置文件（YAML、JSON）使用英文注释
-- README.md 可以使用中文
+- 在 Windows 上编辑文件时注意编码问题，确保保存为 UTF-8 无 BOM
 
 ## 新服务开发流程
 

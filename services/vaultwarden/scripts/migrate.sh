@@ -1,20 +1,20 @@
 #!/bin/bash
 set -e
 
-# Require bash
+# 检测 shell 类型，必须使用 bash 运行
 if [ -z "$BASH_VERSION" ]; then
-    echo "Error: This script requires bash"
-    echo "Usage: bash $0"
+    echo "错误: 此脚本需要使用 bash 运行"
+    echo "请使用: bash $0"
     exit 1
 fi
 
-# Vaultwarden Migration Script
-# Migrate from existing deployment to new config, preserving all data
+# Vaultwarden 迁移脚本
+# 从现有部署迁移到新配置，保留所有数据
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 COMPOSE_DIR="$(dirname "$SCRIPT_DIR")"
 NEW_DATA_DIR="$COMPOSE_DIR/data"
 
-# Color definitions
+# 颜色定义
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -27,88 +27,90 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 log_step() { echo -e "${BLUE}[STEP]${NC} $1"; }
 
 echo "=========================================="
-echo "  Vaultwarden Migration Script"
+echo "  Vaultwarden 迁移脚本"
 echo "=========================================="
 echo ""
-echo "This script helps migrate from existing Vaultwarden deployment to new config"
-echo "All data (passwords, attachments, config) will be preserved"
+echo "此脚本将帮助你从现有 Vaultwarden 部署迁移到新配置"
+echo "迁移过程会保留所有数据（密码、附件、配置等）"
 echo ""
 
-# Get old data directory
-read -p "Enter full path to old Vaultwarden data directory: " OLD_DATA_DIR
+# 获取旧数据目录
+read -p "请输入旧 Vaultwarden 数据目录的完整路径: " OLD_DATA_DIR
 
-# Validate path
+# 验证路径
 if [ ! -d "$OLD_DATA_DIR" ]; then
-    log_error "Directory not found: $OLD_DATA_DIR"
+    log_error "目录不存在: $OLD_DATA_DIR"
     exit 1
 fi
 
 if [ ! -f "$OLD_DATA_DIR/db.sqlite3" ]; then
-    log_error "Database file not found: $OLD_DATA_DIR/db.sqlite3"
-    log_error "Please confirm this is the correct Vaultwarden data directory"
+    log_error "未找到数据库文件: $OLD_DATA_DIR/db.sqlite3"
+    log_error "请确认这是正确的 Vaultwarden 数据目录"
     exit 1
 fi
 
-# Show data directory contents
+
+# 显示数据目录内容
 echo ""
-log_info "Found the following data files:"
+log_info "找到以下数据文件:"
 ls -la "$OLD_DATA_DIR"
 echo ""
 
-# Get old container name
-read -p "Enter old Vaultwarden container name [vaultwarden]: " OLD_CONTAINER
+# 获取旧容器名称
+read -p "请输入旧 Vaultwarden 容器名称 [vaultwarden]: " OLD_CONTAINER
 OLD_CONTAINER="${OLD_CONTAINER:-vaultwarden}"
 
-# Check old container status
+# 检查旧容器状态
 if docker ps -a --format '{{.Names}}' | grep -q "^${OLD_CONTAINER}$"; then
     OLD_CONTAINER_RUNNING=$(docker inspect -f '{{.State.Running}}' "$OLD_CONTAINER" 2>/dev/null || echo "false")
-    log_info "Found old container: $OLD_CONTAINER (running: $OLD_CONTAINER_RUNNING)"
+    log_info "找到旧容器: $OLD_CONTAINER (运行中: $OLD_CONTAINER_RUNNING)"
 else
-    log_warn "Container not found: $OLD_CONTAINER"
+    log_warn "未找到容器: $OLD_CONTAINER"
     OLD_CONTAINER_RUNNING="false"
 fi
 
-# Confirm migration
+# 确认迁移
 echo ""
 echo "=========================================="
-echo "  Migration Plan"
+echo "  迁移计划"
 echo "=========================================="
 echo ""
-echo "Source data directory: $OLD_DATA_DIR"
-echo "Target data directory: $NEW_DATA_DIR"
-echo "Old container: $OLD_CONTAINER"
+echo "源数据目录: $OLD_DATA_DIR"
+echo "目标数据目录: $NEW_DATA_DIR"
+echo "旧容器: $OLD_CONTAINER"
 echo ""
-log_warn "Migration steps:"
-echo "  1. Stop old Vaultwarden container"
-echo "  2. Backup old data"
-echo "  3. Copy data to new directory"
-echo "  4. Initialize new config"
-echo "  5. Start new Vaultwarden"
-echo "  6. Verify migration"
+log_warn "迁移步骤:"
+echo "  1. 停止旧 Vaultwarden 容器"
+echo "  2. 备份旧数据"
+echo "  3. 复制数据到新目录"
+echo "  4. 初始化新配置"
+echo "  5. 启动新 Vaultwarden"
+echo "  6. 验证迁移结果"
 echo ""
-log_warn "Note: Service will be briefly unavailable during migration"
+log_warn "注意: 迁移期间服务将短暂不可用"
 echo ""
 
-read -p "Confirm start migration? (type YES to continue): " confirm
+read -p "确认开始迁移? (输入 YES 继续): " confirm
 if [ "$confirm" != "YES" ]; then
-    echo "Migration cancelled"
+    echo "已取消迁移"
     exit 0
 fi
 
 echo ""
 
-# Step 1: Stop old container
-log_step "1/6 Stopping old container..."
+# Step 1: 停止旧容器
+log_step "1/6 停止旧容器..."
 if [ "$OLD_CONTAINER_RUNNING" = "true" ]; then
     docker stop "$OLD_CONTAINER"
-    log_info "Old container stopped"
+    log_info "旧容器已停止"
     sleep 2
 else
-    log_info "Old container not running, skipping"
+    log_info "旧容器未运行，跳过"
 fi
 
-# Step 2: Backup old data
-log_step "2/6 Backing up old data..."
+
+# Step 2: 备份旧数据
+log_step "2/6 备份旧数据..."
 BACKUP_NAME="pre_migration_$(date +%Y%m%d_%H%M%S)"
 BACKUP_PATH="$COMPOSE_DIR/backups/$BACKUP_NAME"
 mkdir -p "$BACKUP_PATH"
@@ -129,10 +131,10 @@ cp "$OLD_DATA_DIR/config.json" "$BACKUP_PATH/" 2>/dev/null || true
 cd "$COMPOSE_DIR/backups"
 tar -czf "${BACKUP_NAME}.tar.gz" "$BACKUP_NAME"
 rm -rf "$BACKUP_NAME"
-log_info "Backup saved to: backups/${BACKUP_NAME}.tar.gz"
+log_info "备份已保存到: backups/${BACKUP_NAME}.tar.gz"
 
-# Step 3: Copy data to new directory
-log_step "3/6 Copying data to new directory..."
+# Step 3: 复制数据到新目录
+log_step "3/6 复制数据到新目录..."
 mkdir -p "$NEW_DATA_DIR"
 
 if command -v sqlite3 &> /dev/null; then
@@ -147,20 +149,21 @@ cp "$OLD_DATA_DIR/config.json" "$NEW_DATA_DIR/" 2>/dev/null || true
 
 if [ -d "$OLD_DATA_DIR/attachments" ]; then
     cp -r "$OLD_DATA_DIR/attachments" "$NEW_DATA_DIR/"
-    log_info "Copied attachments directory"
+    log_info "已复制附件目录"
 fi
 
 if [ -d "$OLD_DATA_DIR/sends" ]; then
     cp -r "$OLD_DATA_DIR/sends" "$NEW_DATA_DIR/"
-    log_info "Copied Send directory"
+    log_info "已复制 Send 目录"
 fi
 
-chown -R 1000:1000 "$NEW_DATA_DIR" 2>/dev/null || log_warn "Cannot change permissions, ensure uid 1000 has write access"
+chown -R 1000:1000 "$NEW_DATA_DIR" 2>/dev/null || log_warn "无法修改权限，请确保 uid 1000 有写入权限"
 
-log_info "Data copy complete"
+log_info "数据复制完成"
 
-# Step 4: Initialize new config
-log_step "4/6 Initializing new config..."
+
+# Step 4: 初始化新配置
+log_step "4/6 初始化新配置..."
 cd "$COMPOSE_DIR"
 
 if [ ! -f .env ]; then
@@ -173,10 +176,10 @@ if [ ! -f .env ]; then
         sed -i "s|ADMIN_TOKEN=change_me_to_a_secure_token|ADMIN_TOKEN=${ADMIN_TOKEN}|g" .env
     fi
     
-    log_info "Generated new Admin Token"
+    log_info "已生成新的 Admin Token"
     echo ""
     echo "=========================================="
-    echo "  Save Admin Token"
+    echo "  请保存 Admin Token"
     echo "=========================================="
     echo "$ADMIN_TOKEN"
     echo "=========================================="
@@ -186,40 +189,41 @@ fi
 mkdir -p backups
 
 if ! docker network inspect traefik >/dev/null 2>&1; then
-    log_info "Creating traefik network..."
+    log_info "创建 traefik 网络..."
     docker network create traefik
 fi
 
-# Step 5: Start new container
-log_step "5/6 Starting new Vaultwarden..."
+# Step 5: 启动新容器
+log_step "5/6 启动新 Vaultwarden..."
 
 echo ""
-log_warn "Please edit .env file to configure domain and SMTP first:"
+log_warn "请先编辑 .env 文件配置域名和 SMTP:"
 echo "  nano .env"
 echo ""
-echo "Required config:"
-echo "  - VAULTWARDEN_HOST (your domain)"
-echo "  - SMTP settings (if email needed)"
+echo "必须配置:"
+echo "  - VAULTWARDEN_HOST (你的域名)"
+echo "  - SMTP 相关配置 (如需邮件功能)"
 echo ""
 
-read -p "Configuration complete? (y/N): " configured
+read -p "是否已配置完成? (y/N): " configured
 if [[ ! "$configured" =~ ^[Yy]$ ]]; then
     echo ""
-    log_warn "Please start manually after configuration:"
+    log_warn "请配置完成后手动启动:"
     echo "  cd $COMPOSE_DIR"
     echo "  docker compose up -d"
     echo ""
-    log_info "Migration data ready, waiting for manual start"
+    log_info "迁移数据已准备就绪，等待手动启动"
     exit 0
 fi
 
 docker compose up -d
 
-log_info "Waiting for service to start..."
+log_info "等待服务启动..."
 sleep 5
 
-# Step 6: Verify migration
-log_step "6/6 Verifying migration..."
+
+# Step 6: 验证迁移
+log_step "6/6 验证迁移结果..."
 
 MAX_WAIT=30
 WAIT_COUNT=0
@@ -232,35 +236,35 @@ while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
 done
 
 if docker compose ps | grep -q "running"; then
-    log_info "New container started successfully"
+    log_info "新容器启动成功"
     
     CONTAINER_PORT=$(docker compose port vaultwarden 80 2>/dev/null | cut -d: -f2 || echo "")
     if [ -n "$CONTAINER_PORT" ]; then
         if curl -sf "http://localhost:$CONTAINER_PORT/alive" > /dev/null 2>&1; then
-            log_info "Health check passed"
+            log_info "健康检查通过"
         fi
     fi
 else
-    log_error "Container failed to start"
+    log_error "容器启动失败"
     docker compose logs
     exit 1
 fi
 
-# Complete
+# 完成
 echo ""
 echo "=========================================="
-echo -e "${GREEN}  Migration Complete!${NC}"
+echo -e "${GREEN}  迁移完成!${NC}"
 echo "=========================================="
 echo ""
-echo "Pre-migration backup: backups/${BACKUP_NAME}.tar.gz"
+echo "迁移前备份: backups/${BACKUP_NAME}.tar.gz"
 echo ""
-echo "Next steps:"
-echo "  1. Visit your Vaultwarden domain, verify login works"
-echo "  2. Check passwords and attachments are complete"
-echo "  3. If all good, remove old container:"
+echo "下一步:"
+echo "  1. 访问你的 Vaultwarden 域名，验证登录正常"
+echo "  2. 检查密码、附件是否完整"
+echo "  3. 如一切正常，可以删除旧容器:"
 echo "     docker rm $OLD_CONTAINER"
 echo ""
-echo "To rollback:"
+echo "如需回滚:"
 echo "  docker compose down"
 echo "  rm -rf $NEW_DATA_DIR"
 echo "  docker start $OLD_CONTAINER"

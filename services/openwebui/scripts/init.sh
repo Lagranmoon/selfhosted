@@ -1,73 +1,72 @@
 #!/bin/bash
 set -e
 
-# Require bash
+# 检测 shell 类型，必须使用 bash 运行
 if [ -z "$BASH_VERSION" ]; then
-    echo "Error: This script requires bash"
-    echo "Usage: bash $0"
+    echo "错误: 此脚本需要使用 bash 运行"
+    echo "请使用: bash $0"
     exit 1
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 OPENWEBUI_DIR="$(dirname "$SCRIPT_DIR")"
 
-echo "=== Open WebUI Init Script ==="
+echo "=== Open WebUI 初始化脚本 ==="
 
-# Create data directories
-echo "[1/4] Creating data directories..."
+# 创建数据目录
+echo "[1/4] 创建数据目录..."
 mkdir -p "$OPENWEBUI_DIR/data/openwebui"
 mkdir -p "$OPENWEBUI_DIR/data/postgres"
 
-# Check .env file
-echo "[2/4] Checking environment config..."
+# 检查 .env 文件
+echo "[2/4] 检查环境配置..."
 if [ ! -f "$OPENWEBUI_DIR/.env" ]; then
-    echo "Creating .env file..."
+    echo "创建 .env 文件..."
     cp "$OPENWEBUI_DIR/.env.example" "$OPENWEBUI_DIR/.env"
     
-    # Generate random database password
+    # 生成随机数据库密码
     DB_PASSWORD=$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | head -c 32)
     
-    # Replace password
+    # 替换密码
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        # macOS
         sed -i '' "s/change_me_to_a_secure_password/$DB_PASSWORD/" "$OPENWEBUI_DIR/.env"
     else
-        # Linux
         sed -i "s/change_me_to_a_secure_password/$DB_PASSWORD/" "$OPENWEBUI_DIR/.env"
     fi
     
-    echo "Generated random database password"
+    echo "已生成随机数据库密码"
     echo ""
-    echo "Please edit .env file to complete the following config:"
+    echo "请编辑 .env 文件完成以下配置:"
     echo "  - OIDC_CLIENT_ID"
     echo "  - OIDC_CLIENT_SECRET"
 else
-    echo ".env file already exists"
+    echo ".env 文件已存在"
 fi
 
-# Check traefik network
-echo "[3/4] Checking Docker network..."
+# 检查 traefik 网络
+echo "[3/4] 检查 Docker 网络..."
 if ! docker network inspect traefik >/dev/null 2>&1; then
-    echo "Warning: traefik network does not exist"
-    echo "Please deploy Traefik first or run: docker network create traefik"
+    echo "警告: traefik 网络不存在"
+    echo "请先部署 Traefik 或运行: docker network create traefik"
 else
-    echo "traefik network exists"
+    echo "traefik 网络已存在"
 fi
 
-# Show port info
-echo "[4/4] Port configuration..."
+# 显示端口信息
+echo "[4/4] 端口配置..."
 echo ""
-echo "Open WebUI internal port: 8080"
-echo "PostgreSQL internal port: 5432"
-echo "(Access via Traefik reverse proxy, no need to expose ports)"
+echo "Open WebUI 内部端口: 8080"
+echo "PostgreSQL 内部端口: 5432"
+echo "(通过 Traefik 反代访问，无需暴露端口)"
+
 
 echo ""
-echo "=== Init Complete ==="
+echo "=== 初始化完成 ==="
 echo ""
-echo "Next steps:"
-echo "  1. Edit .env file to configure domain and OIDC"
-echo "  2. If using OIDC, create Client in Provider:"
+echo "下一步:"
+echo "  1. 编辑 .env 文件配置域名和 OIDC"
+echo "  2. 如使用 OIDC，在 Provider 创建 Client:"
 echo "     - Client ID: openwebui"
 echo "     - Redirect URI: https://YOUR_DOMAIN/oauth/oidc/callback"
-echo "  3. Run: docker compose up -d"
-echo "  4. Create admin account on first visit"
+echo "  3. 运行: docker compose up -d"
+echo "  4. 首次访问创建管理员账户"
