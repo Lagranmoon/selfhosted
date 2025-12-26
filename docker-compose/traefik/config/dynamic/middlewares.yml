@@ -1,0 +1,103 @@
+http:
+  middlewares:
+    # Dashboard BasicAuth
+    dashboard-auth:
+      basicAuth:
+        users:
+          - "{{env `TRAEFIK_DASHBOARD_AUTH`}}"
+        removeHeader: true
+
+    # Security Headers
+    security-headers:
+      headers:
+        browserXssFilter: true
+        contentTypeNosniff: true
+        frameDeny: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 31536000
+        customFrameOptionsValue: "SAMEORIGIN"
+        customResponseHeaders:
+          X-Robots-Tag: "noindex, nofollow"
+          X-Download-Options: "noopen"
+          X-Permitted-Cross-Domain-Policies: "none"
+          Referrer-Policy: "strict-origin-when-cross-origin"
+          Permissions-Policy: "camera=(), microphone=(), geolocation=(), payment=()"
+
+    # CrowdSec Bouncer
+    crowdsec:
+      plugin:
+        crowdsec:
+          enabled: true
+          crowdsecMode: stream
+          crowdsecLapiScheme: http
+          crowdsecLapiHost: crowdsec:8080
+          crowdsecLapiKey: "{{env `CROWDSEC_BOUNCER_API_KEY`}}"
+          crowdsecAppsecEnabled: true
+          crowdsecAppsecHost: crowdsec:7422
+          crowdsecAppsecFailureBlock: true
+          crowdsecAppsecUnreachableBlock: false
+          updateIntervalSeconds: 15
+          defaultDecisionSeconds: 15
+          forwardedHeadersTrustedIPs:
+            - "10.0.0.0/8"
+            - "172.16.0.0/12"
+            - "192.168.0.0/16"
+
+    # Rate Limiting
+    rate-limit:
+      rateLimit:
+        average: 100
+        burst: 200
+        period: 1s
+
+    # Gzip Compression
+    gzip:
+      compress:
+        excludedContentTypes:
+          - "text/event-stream"
+
+    # Chain: Default (常用中间件组合)
+    chain-default:
+      chain:
+        middlewares:
+          - security-headers
+          - crowdsec
+          - gzip
+
+    # Chain: Secure (更严格的安全策略)
+    chain-secure:
+      chain:
+        middlewares:
+          - security-headers
+          - crowdsec
+          - rate-limit
+          - gzip
+
+    # ================================
+    # IP 白名单中间件
+    # ================================
+    
+    # IP 白名单 - 仅允许特定 IP 访问
+    # 用法: traefik.http.routers.xxx.middlewares=ip-whitelist@file
+    ip-whitelist:
+      ipAllowList:
+        sourceRange:
+          - "127.0.0.1/32"
+          - "10.0.0.0/8"
+          - "172.16.0.0/12"
+          - "192.168.0.0/16"
+          # - "1.2.3.4/32"      # 你的家庭 IP
+          # - "5.6.7.8/32"      # 你的办公 IP
+          # - "203.0.113.0/24"  # 你的服务器网段
+        # ipStrategy:
+        #   depth: 1           # 如果在 CDN/代理后面，设置深度获取真实 IP
+
+    # Chain: 内部服务 (白名单 + 安全)
+    chain-internal:
+      chain:
+        middlewares:
+          - ip-whitelist
+          - security-headers
+          - crowdsec
+          - gzip

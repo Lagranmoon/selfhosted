@@ -1,0 +1,30 @@
+# Environment files
+.env
+*.env.local
+
+# Certificates
+docker-compose/traefik/certs/
+*.pem
+*.key
+*.crt
+
+# Logs
+docker-compose/traefik/logs/
+*.log
+
+# CrowdSec data
+docker-compose/traefik/crowdsec/data/
+
+# Open WebUI data
+docker-compose/openwebui/data/
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

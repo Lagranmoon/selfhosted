@@ -1,0 +1,122 @@
+networks:
+  traefik:
+    external: true
+  openwebui:
+    driver: bridge
+
+services:
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: openwebui
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      # ================================
+      # 基础配置
+      # ================================
+      - ENV=prod
+      - WEBUI_URL=https://${OPENWEBUI_HOST}
+      - WEBUI_NAME=${WEBUI_NAME:-Open WebUI}
+      - DEFAULT_LOCALE=zh-CN
+      
+      # ================================
+      # 数据库
+      # ================================
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      
+      # ================================
+      # 用户认证
+      # ================================
+      - ENABLE_SIGNUP=false
+      - DEFAULT_USER_ROLE=pending
+      - ENABLE_LOGIN_FORM=true
+      - ENABLE_PASSWORD_AUTH=true
+      
+      # ================================
+      # OIDC (Pocket ID)
+      # ================================
+      - ENABLE_OAUTH_SIGNUP=true
+      - OAUTH_MERGE_ACCOUNTS_BY_EMAIL=true
+      - OAUTH_PROVIDER_NAME=Pocket ID
+      - OAUTH_CLIENT_ID=${OIDC_CLIENT_ID}
+      - OAUTH_CLIENT_SECRET=${OIDC_CLIENT_SECRET}
+      - OPENID_PROVIDER_URL=${OIDC_ISSUER_URL}/.well-known/openid-configuration
+      - OPENID_REDIRECT_URI=https://${OPENWEBUI_HOST}/oauth/oidc/callback
+      
+      # ================================
+      # 性能优化 (4C8G)
+      # ================================
+      - THREAD_POOL_SIZE=50
+      - ENABLE_AUTOCOMPLETE_GENERATION=false
+      - ENABLE_REALTIME_CHAT_SAVE=false
+      - MODELS_CACHE_TTL=300
+      
+      # ================================
+      # 禁用语音功能
+      # ================================
+      - AUDIO_STT_ENGINE=
+      - AUDIO_TTS_ENGINE=
+      
+      # ================================
+      # 端口配置
+      # ================================
+      - PORT=${OPENWEBUI_PORT:-8080}
+
+    networks:
+      - traefik
+      - openwebui
+    volumes:
+      - ./data/openwebui:/app/backend/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      # Router
+      - "traefik.http.routers.openwebui.entrypoints=https"
+      - "traefik.http.routers.openwebui.rule=Host(`${OPENWEBUI_HOST}`)"
+      - "traefik.http.routers.openwebui.tls=true"
+      - "traefik.http.routers.openwebui.tls.certresolver=cloudflare"
+      - "traefik.http.routers.openwebui.middlewares=chain-default@file"
+      # Service
+      - "traefik.http.services.openwebui.loadbalancer.server.port=${OPENWEBUI_PORT:-8080}"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${OPENWEBUI_PORT:-8080}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: openwebui-postgres
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    networks:
+      - openwebui
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

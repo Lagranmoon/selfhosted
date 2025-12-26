@@ -1,0 +1,21 @@
+# IP 白名单配置
+# 白名单中的 IP 不会被 CrowdSec 封禁
+# 修改后需要重启 CrowdSec: docker compose restart crowdsec
+
+name: whitelist
+description: "Custom IP whitelist"
+whitelist:
+  reason: "Whitelisted IP"
+  # 单个 IP
+  ip:
+    - "127.0.0.1"
+    # - "1.2.3.4"           # 你的家庭 IP
+    # - "5.6.7.8"           # 你的办公 IP
+  
+  # CIDR 网段
+  cidr:
+    - "10.0.0.0/8"          # 内网
+    - "172.16.0.0/12"       # 内网
+    - "192.168.0.0/16"      # 内网
+    # - "100.64.0.0/10"     # CGNAT (部分运营商)
+    # - "203.0.113.0/24"    # 你的服务器网段
