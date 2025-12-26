@@ -3,7 +3,7 @@ set -e
 
 # Vaultwarden 恢复脚本
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 COMPOSE_DIR="$(dirname "$SCRIPT_DIR")"
 BACKUP_DIR="$COMPOSE_DIR/backups"
 DATA_DIR="$COMPOSE_DIR/data"
@@ -24,17 +24,17 @@ echo "=========================================="
 echo ""
 
 # 列出可用备份
-echo "可用的本地备份:"
+echo "可用的本地备�?"
 echo ""
 ls -lh "$BACKUP_DIR"/*.tar.gz 2>/dev/null | awk '{print NR". "$NF" ("$5")"}' || {
     log_error "没有找到本地备份文件"
     echo ""
-    echo "你可以从 S3 或远程服务器下载备份到 $BACKUP_DIR/"
+    echo "你可以从 S3 或远程服务器下载备份�?$BACKUP_DIR/"
     exit 1
 }
 
 echo ""
-read -p "请输入要恢复的备份文件名 (或输入完整路径): " BACKUP_FILE
+read -p "请输入要恢复的备份文件名 (或输入完整路�?: " BACKUP_FILE
 
 # 处理输入
 if [[ ! "$BACKUP_FILE" == /* ]] && [[ ! "$BACKUP_FILE" == ./* ]]; then
@@ -46,18 +46,18 @@ if [[ ! "$BACKUP_FILE" == /* ]] && [[ ! "$BACKUP_FILE" == ./* ]]; then
 fi
 
 if [ ! -f "$BACKUP_FILE" ]; then
-    log_error "备份文件不存在: $BACKUP_FILE"
+    log_error "备份文件不存�? $BACKUP_FILE"
     exit 1
 fi
 
 echo ""
-log_warn "警告: 恢复操作将覆盖当前所有数据!"
+log_warn "警告: 恢复操作将覆盖当前所有数�?"
 log_warn "当前数据将备份到 ${DATA_DIR}.bak"
 echo ""
 read -p "确认恢复? (输入 YES 继续): " confirm
 
 if [ "$confirm" != "YES" ]; then
-    echo "已取消恢复"
+    echo "已取消恢�?
     exit 0
 fi
 
@@ -68,13 +68,12 @@ docker compose down 2>/dev/null || true
 
 # 备份当前数据
 if [ -d "$DATA_DIR" ]; then
-    log_info "备份当前数据到 ${DATA_DIR}.bak..."
+    log_info "备份当前数据�?${DATA_DIR}.bak..."
     rm -rf "${DATA_DIR}.bak"
     mv "$DATA_DIR" "${DATA_DIR}.bak"
 fi
 
-# 创建新数据目录
-mkdir -p "$DATA_DIR"
+# 创建新数据目�?mkdir -p "$DATA_DIR"
 
 # 解压备份
 log_info "解压备份文件..."
@@ -87,12 +86,10 @@ if [ -z "$EXTRACTED_DIR" ]; then
     EXTRACTED_DIR="$TEMP_DIR"
 fi
 
-# 恢复数据库
-if [ -f "$EXTRACTED_DIR/db.sqlite3" ]; then
-    log_info "恢复数据库..."
+# 恢复数据�?if [ -f "$EXTRACTED_DIR/db.sqlite3" ]; then
+    log_info "恢复数据�?.."
     cp "$EXTRACTED_DIR/db.sqlite3" "$DATA_DIR/"
-    # 删除可能存在的 WAL 文件（防止数据库损坏）
-    rm -f "$DATA_DIR/db.sqlite3-wal" "$DATA_DIR/db.sqlite3-shm"
+    # 删除可能存在�?WAL 文件（防止数据库损坏�?    rm -f "$DATA_DIR/db.sqlite3-wal" "$DATA_DIR/db.sqlite3-shm"
 else
     log_error "备份中没有找到数据库文件!"
     exit 1
@@ -136,17 +133,16 @@ docker compose up -d
 # 等待服务启动
 sleep 5
 
-# 检查服务状态
-if docker compose ps | grep -q "running"; then
+# 检查服务状�?if docker compose ps | grep -q "running"; then
     echo ""
     echo "=========================================="
     log_info "恢复完成!"
     echo "=========================================="
     echo ""
-    echo "旧数据已备份到: ${DATA_DIR}.bak"
-    echo "如需回滚，可以手动恢复"
+    echo "旧数据已备份�? ${DATA_DIR}.bak"
+    echo "如需回滚，可以手动恢�?
 else
-    log_error "服务启动失败，请检查日志: docker compose logs"
+    log_error "服务启动失败，请检查日�? docker compose logs"
     echo ""
     echo "如需回滚:"
     echo "  docker compose down"

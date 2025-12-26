@@ -3,8 +3,7 @@ set -e
 
 # Vaultwarden 备份脚本
 # 备份策略: 最近7天全部 + 最近3个月每月第一个 + 最近3年每年第一个
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 COMPOSE_DIR="$(dirname "$SCRIPT_DIR")"
 BACKUP_DIR="$COMPOSE_DIR/backups"
 DATA_DIR="$COMPOSE_DIR/data"
@@ -39,24 +38,24 @@ mkdir -p "$BACKUP_DIR"
 # ==========================================
 # 1. 本地备份
 # ==========================================
-log_info "开始本地备份..."
+log_info "开始本地备�?.."
 
 BACKUP_PATH="$BACKUP_DIR/$BACKUP_NAME"
 mkdir -p "$BACKUP_PATH"
 
-# 备份 SQLite 数据库 (使用内置命令)
-log_info "备份数据库..."
+# 备份 SQLite 数据�?(使用内置命令)
+log_info "备份数据�?.."
 if docker exec vaultwarden /vaultwarden backup 2>/dev/null; then
-    # 内置备份会创建 db.sqlite3.backup
+    # 内置备份会创�?db.sqlite3.backup
     cp "$DATA_DIR/db.sqlite3.backup" "$BACKUP_PATH/db.sqlite3" 2>/dev/null || \
     docker exec vaultwarden sqlite3 /data/db.sqlite3 ".backup '/data/db_backup.sqlite3'" && \
     cp "$DATA_DIR/db_backup.sqlite3" "$BACKUP_PATH/db.sqlite3"
 else
-    # 回退到 sqlite3 命令
+    # 回退�?sqlite3 命令
     if command -v sqlite3 &> /dev/null; then
         sqlite3 "$DATA_DIR/db.sqlite3" ".backup '$BACKUP_PATH/db.sqlite3'"
     else
-        log_warn "sqlite3 未安装，直接复制数据库文件"
+        log_warn "sqlite3 未安装，直接复制数据库文�?
         cp "$DATA_DIR/db.sqlite3" "$BACKUP_PATH/"
     fi
 fi
@@ -94,14 +93,14 @@ BACKUP_SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
 log_info "本地备份完成: ${BACKUP_NAME}.tar.gz ($BACKUP_SIZE)"
 
 # ==========================================
-# 2. 上传到 S3
+# 2. 上传�?S3
 # ==========================================
 if [ -n "$S3_BUCKET" ] && [ -n "$S3_ACCESS_KEY" ]; then
-    log_info "上传到 S3..."
+    log_info "上传�?S3..."
     
-    # 检查 rclone 或 aws cli
+    # 检�?rclone �?aws cli
     if command -v rclone &> /dev/null; then
-        # 配置 rclone (如果未配置)
+        # 配置 rclone (如果未配�?
         if ! rclone listremotes | grep -q "vaultwarden-s3:"; then
             rclone config create vaultwarden-s3 s3 \
                 provider "Other" \
@@ -122,10 +121,10 @@ if [ -n "$S3_BUCKET" ] && [ -n "$S3_ACCESS_KEY" ]; then
             --region "$S3_REGION" && \
             log_info "S3 上传完成" || log_error "S3 上传失败"
     else
-        log_warn "未安装 rclone 或 aws cli，跳过 S3 上传"
+        log_warn "未安�?rclone �?aws cli，跳�?S3 上传"
     fi
 else
-    log_warn "未配置 S3，跳过上传"
+    log_warn "未配�?S3，跳过上�?
 fi
 
 # ==========================================
@@ -148,20 +147,19 @@ if [ -n "$REMOTE_HOST" ] && [ -n "$REMOTE_USER" ]; then
     
     # 上传备份
     scp $SSH_KEY_OPT "$BACKUP_FILE" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH/" && \
-        log_info "远程服务器上传完成" || log_error "远程服务器上传失败"
+        log_info "远程服务器上传完�? || log_error "远程服务器上传失�?
 else
-    log_warn "未配置远程服务器，跳过上传"
+    log_warn "未配置远程服务器，跳过上�?
 fi
 
 # ==========================================
-# 4. 清理旧备份 (本地)
+# 4. 清理旧备�?(本地)
 # ==========================================
-log_info "清理旧备份..."
+log_info "清理旧备�?.."
 
 cd "$BACKUP_DIR"
 
-# 获取所有备份文件，按日期排序
-mapfile -t ALL_BACKUPS < <(ls -1 vaultwarden_*.tar.gz 2>/dev/null | sort -r)
+# 获取所有备份文件，按日期排�?mapfile -t ALL_BACKUPS < <(ls -1 vaultwarden_*.tar.gz 2>/dev/null | sort -r)
 
 KEEP_FILES=()
 CURRENT_MONTH=""
@@ -176,22 +174,19 @@ for i in "${!ALL_BACKUPS[@]}"; do
     FILE_YEAR="${FILE_DATE:0:4}"
     FILE_MONTH="${FILE_DATE:0:6}"
     
-    # 计算文件年龄（天）
-    FILE_TIMESTAMP=$(date -d "${FILE_DATE:0:4}-${FILE_DATE:4:2}-${FILE_DATE:6:2}" +%s 2>/dev/null || echo 0)
+    # 计算文件年龄（天�?    FILE_TIMESTAMP=$(date -d "${FILE_DATE:0:4}-${FILE_DATE:4:2}-${FILE_DATE:6:2}" +%s 2>/dev/null || echo 0)
     NOW_TIMESTAMP=$(date +%s)
     AGE_DAYS=$(( (NOW_TIMESTAMP - FILE_TIMESTAMP) / 86400 ))
     
     KEEP=false
     REASON=""
     
-    # 规则1: 最近7天全部保留
-    if [ $AGE_DAYS -le 7 ]; then
+    # 规则1: 最�?天全部保�?    if [ $AGE_DAYS -le 7 ]; then
         KEEP=true
-        REASON="最近7天"
+        REASON="最�?�?
     fi
     
-    # 规则2: 最近3个月每月第一个
-    if [ "$FILE_MONTH" != "$CURRENT_MONTH" ] && [ $MONTHS_COUNT -lt 3 ]; then
+    # 规则2: 最�?个月每月第一�?    if [ "$FILE_MONTH" != "$CURRENT_MONTH" ] && [ $MONTHS_COUNT -lt 3 ]; then
         if [ $AGE_DAYS -gt 7 ] && [ $AGE_DAYS -le 90 ]; then
             KEEP=true
             REASON="月度备份"
@@ -200,8 +195,7 @@ for i in "${!ALL_BACKUPS[@]}"; do
         fi
     fi
     
-    # 规则3: 最近3年每年第一个
-    if [ "$FILE_YEAR" != "$CURRENT_YEAR" ] && [ $YEARS_COUNT -lt 3 ]; then
+    # 规则3: 最�?年每年第一�?    if [ "$FILE_YEAR" != "$CURRENT_YEAR" ] && [ $YEARS_COUNT -lt 3 ]; then
         if [ $AGE_DAYS -gt 90 ]; then
             KEEP=true
             REASON="年度备份"
@@ -217,13 +211,13 @@ for i in "${!ALL_BACKUPS[@]}"; do
     fi
 done
 
-log_info "保留 ${#KEEP_FILES[@]} 个备份文件"
+log_info "保留 ${#KEEP_FILES[@]} 个备份文�?
 
 # ==========================================
-# 5. 清理远程旧备份 (S3)
+# 5. 清理远程旧备�?(S3)
 # ==========================================
 if [ -n "$S3_BUCKET" ] && command -v rclone &> /dev/null; then
-    log_info "清理 S3 旧备份..."
+    log_info "清理 S3 旧备�?.."
     # 删除超过 3 年的备份
     rclone delete "vaultwarden-s3:$S3_BUCKET/vaultwarden/" \
         --min-age 1095d \
@@ -238,17 +232,17 @@ echo "=========================================="
 log_info "备份完成!"
 echo "=========================================="
 echo "本地备份: $BACKUP_FILE"
-echo "保留策略: 7天全部 + 3个月每月 + 3年每年"
+echo "保留策略: 7天全�?+ 3个月每月 + 3年每�?
 
 # ==========================================
-# 6. 验证备份 (可选)
+# 6. 验证备份 (可�?
 # ==========================================
 VERIFY_COUNT="${VERIFY_BACKUP_COUNT:-0}"
 if [ "$VERIFY_COUNT" -gt 0 ]; then
     echo ""
-    log_info "开始验证最近 $VERIFY_COUNT 个备份..."
+    log_info "开始验证最�?$VERIFY_COUNT 个备�?.."
     if [ -x "$SCRIPT_DIR/verify-backup.sh" ]; then
-        "$SCRIPT_DIR/verify-backup.sh" "$VERIFY_COUNT" || log_warn "备份验证失败，请检查"
+        "$SCRIPT_DIR/verify-backup.sh" "$VERIFY_COUNT" || log_warn "备份验证失败，请检�?
     else
         log_warn "验证脚本不存在或不可执行"
     fi

@@ -4,19 +4,18 @@ set -e
 # Vaultwarden 备份验证脚本
 # 通过沙盒恢复测试验证备份是否可用
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 COMPOSE_DIR="$(dirname "$SCRIPT_DIR")"
 BACKUP_DIR="$COMPOSE_DIR/backups"
 
-# 默认验证最近 3 个备份
-VERIFY_COUNT="${1:-3}"
+# 默认验证最�?3 个备�?VERIFY_COUNT="${1:-3}"
 
 # 加载环境变量
 if [ -f "$COMPOSE_DIR/.env" ]; then
     export $(grep -v '^#' "$COMPOSE_DIR/.env" | xargs)
 fi
 
-# 验证配置 (从 .env 读取)
+# 验证配置 (�?.env 读取)
 TEST_EMAIL="${VERIFY_TEST_EMAIL:-}"
 TEST_PASSWORD="${VERIFY_TEST_PASSWORD:-}"
 TEST_ITEM_NAME="${VERIFY_TEST_ITEM:-backup-test}"
@@ -53,20 +52,18 @@ echo "  $(date)"
 echo "=========================================="
 echo ""
 
-# 检查依赖
-if ! command -v bw &> /dev/null; then
-    log_error "未安装 Bitwarden CLI (bw)"
+# 检查依�?if ! command -v bw &> /dev/null; then
+    log_error "未安�?Bitwarden CLI (bw)"
     echo ""
     echo "安装方式:"
     echo "  npm install -g @bitwarden/cli"
-    echo "  或下载: https://bitwarden.com/help/cli/"
+    echo "  或下�? https://bitwarden.com/help/cli/"
     exit 1
 fi
 
-# 检查验证配置
-if [ -z "$TEST_EMAIL" ] || [ -z "$TEST_PASSWORD" ]; then
-    log_warn "未配置验证账号，将只进行基础健康检查"
-    log_warn "完整验证需要在 .env 中配置:"
+# 检查验证配�?if [ -z "$TEST_EMAIL" ] || [ -z "$TEST_PASSWORD" ]; then
+    log_warn "未配置验证账号，将只进行基础健康检�?
+    log_warn "完整验证需要在 .env 中配�?"
     echo "  VERIFY_TEST_EMAIL=test@example.com"
     echo "  VERIFY_TEST_PASSWORD=your_master_password"
     echo "  VERIFY_TEST_ITEM=backup-test"
@@ -85,7 +82,7 @@ if [ ${#BACKUP_FILES[@]} -eq 0 ]; then
     exit 1
 fi
 
-log_info "将验证最近 ${#BACKUP_FILES[@]} 个备份"
+log_info "将验证最�?${#BACKUP_FILES[@]} 个备�?
 echo ""
 
 # 验证结果
@@ -99,8 +96,7 @@ verify_backup() {
     
     log_step "验证备份: $BACKUP_NAME"
     
-    # 清理之前的沙盒
-    docker rm -f "$SANDBOX_CONTAINER" 2>/dev/null || true
+    # 清理之前的沙�?    docker rm -f "$SANDBOX_CONTAINER" 2>/dev/null || true
     rm -rf "$SANDBOX_DATA_DIR"
     mkdir -p "$SANDBOX_DATA_DIR"
     
@@ -115,15 +111,13 @@ verify_backup() {
         EXTRACTED_DIR="$TEMP_DIR"
     fi
     
-    # 检查必要文件
-    if [ ! -f "$EXTRACTED_DIR/db.sqlite3" ]; then
+    # 检查必要文�?    if [ ! -f "$EXTRACTED_DIR/db.sqlite3" ]; then
         log_error "  备份中没有数据库文件"
         rm -rf "$TEMP_DIR"
         return 1
     fi
     
-    # 复制数据到沙盒目录
-    cp -r "$EXTRACTED_DIR"/* "$SANDBOX_DATA_DIR/"
+    # 复制数据到沙盒目�?    cp -r "$EXTRACTED_DIR"/* "$SANDBOX_DATA_DIR/"
     rm -f "$SANDBOX_DATA_DIR/db.sqlite3-wal" "$SANDBOX_DATA_DIR/db.sqlite3-shm"
     rm -rf "$TEMP_DIR"
     
@@ -162,16 +156,15 @@ verify_backup() {
     
     log_info "  服务启动成功 (${WAIT_COUNT}s)"
     
-    # 基础健康检查
-    log_info "  执行健康检查..."
+    # 基础健康检�?    log_info "  执行健康检�?.."
     if ! curl -sf "http://localhost:$SANDBOX_PORT/alive" > /dev/null; then
-        log_error "  健康检查失败"
+        log_error "  健康检查失�?
         return 1
     fi
     
-    # 检查 API 是否正常
+    # 检�?API 是否正常
     if ! curl -sf "http://localhost:$SANDBOX_PORT/api/config" > /dev/null; then
-        log_error "  API 检查失败"
+        log_error "  API 检查失�?
         return 1
     fi
     
@@ -192,7 +185,7 @@ verify_backup() {
         }
         export BW_SESSION="$SESSION"
         
-        log_info "  登录成功，验证数据..."
+        log_info "  登录成功，验证数�?.."
         
         # 同步数据
         bw sync > /dev/null 2>&1
@@ -200,7 +193,7 @@ verify_backup() {
         # 获取指定条目
         local ITEM_JSON
         ITEM_JSON=$(bw get item "$TEST_ITEM_NAME" 2>/dev/null) || {
-            log_error "  未找到测试条目: $TEST_ITEM_NAME"
+            log_error "  未找到测试条�? $TEST_ITEM_NAME"
             bw logout > /dev/null 2>&1 || true
             return 1
         }
@@ -214,7 +207,7 @@ verify_backup() {
                [[ "$ITEM_NOTES" == *"$TEST_EXPECTED_VALUE"* ]]; then
                 log_info "  数据验证通过"
             else
-                log_error "  数据验证失败: 未找到预期值"
+                log_error "  数据验证失败: 未找到预期�?
                 bw logout > /dev/null 2>&1 || true
                 return 1
             fi
@@ -226,17 +219,16 @@ verify_backup() {
         bw logout > /dev/null 2>&1 || true
     fi
     
-    log_info "  ✓ 备份验证通过"
+    log_info "  �?备份验证通过"
     return 0
 }
 
-# 验证所有备份
-for BACKUP_FILE in "${BACKUP_FILES[@]}"; do
+# 验证所有备�?for BACKUP_FILE in "${BACKUP_FILES[@]}"; do
     echo ""
     if verify_backup "$BACKUP_FILE"; then
-        VERIFY_RESULTS+=("✓ $(basename "$BACKUP_FILE")")
+        VERIFY_RESULTS+=("�?$(basename "$BACKUP_FILE")")
     else
-        VERIFY_RESULTS+=("✗ $(basename "$BACKUP_FILE")")
+        VERIFY_RESULTS+=("�?$(basename "$BACKUP_FILE")")
         ((FAILED_COUNT++))
     fi
     
@@ -252,7 +244,7 @@ echo "=========================================="
 echo "  验证结果"
 echo "=========================================="
 for RESULT in "${VERIFY_RESULTS[@]}"; do
-    if [[ "$RESULT" == ✓* ]]; then
+    if [[ "$RESULT" == �? ]]; then
         echo -e "${GREEN}$RESULT${NC}"
     else
         echo -e "${RED}$RESULT${NC}"
@@ -261,7 +253,7 @@ done
 echo ""
 
 if [ $FAILED_COUNT -gt 0 ]; then
-    log_error "有 $FAILED_COUNT 个备份验证失败!"
+    log_error "�?$FAILED_COUNT 个备份验证失�?"
     exit 1
 else
     log_info "所有备份验证通过!"
