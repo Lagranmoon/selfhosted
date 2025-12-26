@@ -1,10 +1,10 @@
 #!/bin/bash
 set -e
 
-# 检测 shell 类型，必须使用 bash 运行
+# Require bash
 if [ -z "$BASH_VERSION" ]; then
-    echo "错误: 此脚本需要使用 bash 运行"
-    echo "请使用: bash $0"
+    echo "Error: This script requires bash"
+    echo "Usage: bash $0"
     exit 1
 fi
 
@@ -14,24 +14,24 @@ COMPOSE_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$COMPOSE_DIR"
 
 echo "=========================================="
-echo "  Vaultwarden 初始化脚�?
+echo "  Vaultwarden Init Script"
 echo "=========================================="
 echo ""
 
-# 创建数据目录
-echo ">>> 创建数据目录..."
+# Create data directories
+echo ">>> Creating data directories..."
 mkdir -p data
 mkdir -p backups
 
-# 设置目录权限 (uid:gid 1000:1000)
-chown -R 1000:1000 data backups 2>/dev/null || echo "注意: 无法修改目录权限，请确保 uid 1000 有写入权�?
+# Set directory permissions (uid:gid 1000:1000)
+chown -R 1000:1000 data backups 2>/dev/null || echo "Note: Cannot change directory permissions, ensure uid 1000 has write access"
 
-# 创建 .env 文件
+# Create .env file
 if [ ! -f .env ]; then
-    echo ">>> 创建 .env 文件..."
+    echo ">>> Creating .env file..."
     cp .env.example .env
     
-    # 生成 Admin Token
+    # Generate Admin Token
     ADMIN_TOKEN=$(openssl rand -base64 48)
     if [[ "$OSTYPE" == "darwin"* ]]; then
         sed -i '' "s|ADMIN_TOKEN=change_me_to_a_secure_token|ADMIN_TOKEN=${ADMIN_TOKEN}|g" .env
@@ -41,34 +41,34 @@ if [ ! -f .env ]; then
     
     echo ""
     echo "=========================================="
-    echo "  Admin Token 已生�?
+    echo "  Admin Token Generated"
     echo "=========================================="
     echo ""
-    echo "请妥善保存以�?Admin Token:"
+    echo "Please save this Admin Token:"
     echo "$ADMIN_TOKEN"
     echo ""
-    echo "访问 Admin 页面: https://your-domain/admin"
+    echo "Admin page: https://your-domain/admin"
     echo ""
 else
-    echo ">>> .env 文件已存在，跳过创建"
+    echo ">>> .env file already exists, skipping"
 fi
 
-# 检�?Docker 网络
+# Check Docker network
 if ! docker network inspect traefik >/dev/null 2>&1; then
     echo ""
-    echo ">>> 创建 traefik 网络..."
+    echo ">>> Creating traefik network..."
     docker network create traefik
 fi
 
 echo ""
 echo "=========================================="
-echo "  初始化完�?
+echo "  Init Complete"
 echo "=========================================="
 echo ""
-echo "下一�?"
-echo "1. 编辑 .env 文件，配置域名和 SMTP"
-echo "2. 配置 S3 和远程服务器备份信息"
-echo "3. 运行: docker compose up -d"
-echo "4. 设置 cron 定时备份: crontab -e"
+echo "Next steps:"
+echo "1. Edit .env file, configure domain and SMTP"
+echo "2. Configure S3 and remote server backup info"
+echo "3. Run: docker compose up -d"
+echo "4. Set up cron for scheduled backup: crontab -e"
 echo "   0 3 * * * $SCRIPT_DIR/backup.sh"
 echo ""
